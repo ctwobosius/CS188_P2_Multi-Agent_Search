@@ -275,17 +275,136 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        pacmanActions = gameState.getLegalActions()
+        pacmanSuccs = [(gameState.generateSuccessor(0, action), action) for action in pacmanActions]
+        scores = [(self.score(succ[0], 1, self.depth), succ[1]) for succ in pacmanSuccs]
+        bestAction = max(scores, key=lambda score: score[0])[1]
+        return bestAction
+
+
+    def score(self, gameState, agent, depth):
+        if gameState.isWin() or depth <= 0 or gameState.isLose():
+            return self.evaluationFunction(gameState)
+        elif agent != 0:
+            bestScore = lambda scores: sum(scores) / len(scores)
+        else:
+            bestScore = max
+
+        succs = [gameState.generateSuccessor(agent, action) for action in gameState.getLegalActions(agent)]
+        agent = (agent + 1) % gameState.getNumAgents()
+        if agent == 0:
+            depth = depth - 1
+        scores = [self.score(succ, agent, depth) for succ in succs]
+
+        return bestScore(scores)
 
 def betterEvaluationFunction(currentGameState):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION:
+
+    Win = inf
+    Lose = -inf
+    The closer you get to food, the more your score increases
+    The further from ghosts you are, the more your score increases
+    The closer you get to scared ghosts, the more your score increases
+
+
+
+        gameState.getLegalActions(agentIndex):
+        Returns a list of legal actions for an agent
+        agentIndex=0 means Pacman, ghosts are >= 1
+
+        gameState.generateSuccessor(agentIndex, action):
+        Returns the successor game state after an agent takes an action
+
+        gameState.getNumAgents():
+
+        gameState.isWin():
+
+        gameState.isLose():
+
+        successorGameState = currentGameState.generatePacmanSuccessor(action)
+        newPos = successorGameState.getPacmanPosition()
+        newFood = successorGameState.getFood()
+        newGhostStates = successorGameState.getGhostStates()
+        newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+
+
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    # if currentGameState.isWin():
+    #     return float("inf")
+    # elif currentGameState.isLose():
+    #     return float("-inf")
+    pacmanPos = currentGameState.getPacmanPosition()
+    food = currentGameState.getFood()
+    # foodLeft = len(food.asList())
+    foodDist = 100
+    #
+    # foodH = 10 / (foodLeft + 1)
+    foodH = 0
+    ghostH = 0
+    ghostStates = currentGameState.getGhostStates()
+    for ghostState in ghostStates:
+        ghostDist = util.manhattanDistance(pacmanPos, ghostState.getPosition())
+        if ghostState.scaredTimer <= 0:
+            ghostH -= 1000 / (ghostDist + .00001)
+        else:
+            ghostH += 10 / (ghostDist + .00001)
+    if len(food.asList()) > 0:
+        foodDist = min([util.manhattanDistance(v, pacmanPos) for v in (food.asList())])
+        # print(10 / foodDist)
+    foodH += 10 / (foodDist)
+    if foodDist <= 0:
+        foodH += 20
+    # print(currentGameState.getScore())
+
+    # print(foodH)
+    return foodH + currentGameState.getScore()
+    # util.raiseNotDefined()
+
+
+
+
+
+
+
+
+    successorGameState = currentGameState.generatePacmanSuccessor(action)
+    newPos = successorGameState.getPacmanPosition()
+    newFood = successorGameState.getFood()
+    newGhostStates = successorGameState.getGhostStates()
+    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+
+    "*** YOUR CODE HERE ***"
+    ghostH = 0
+    foodH = 0
+    scaredH = 0
+    # print(successorGameState.getScore())
+    # print(successorGameState.getFood)
+    if newFood.asList():
+        foodDist = min([util.manhattanDistance(v, newPos) for v in (newFood.asList())])
+        foodH = 10 / (foodDist + .1)
+        if foodDist <= 0:
+            foodH += 250
+        # print(foodDist)
+    for ghost in newGhostStates:
+        ghostDist = util.manhattanDistance(ghost.getPosition(), newPos)
+        if ghostDist <= 1:
+            foodH /= 10
+            ghostH -= 500
+        # ghostH += (ghostDist)
+    for stime in newScaredTimes:
+        scaredH += stime * 50
+    if scaredH:
+        ghostH += 500
+    # print(successorGameState.getScore() + ghostH + foodH + scaredH)
+    # if util.manhattanDistance(newPos, currentGameState.getPacmanPosition()) == 0:
+    #     foodH -= 1000
+    return successorGameState.getScore() + ghostH + foodH + scaredH
 
 # Abbreviation
 better = betterEvaluationFunction
